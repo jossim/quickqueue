@@ -24,6 +24,9 @@ var config = {
     { name: 'queue2', routingKey: 'butterflies' }
   ]
 }
+
+// Returns a promise with the value of a channel from amqplib
+quickqueue.initialize(url, config);
 ```
 
 ## Queue messages
