@@ -1,0 +1,122 @@
+#!/bin/bash
+
+# Name of image & container.
+image_name='quickqueue'
+container_name='quickqueue'
+
+# Build docker image based on Dockerfile, if creating or starting container.
+if [ "$1" = "-c" ] || [ "$1" = "-t" ]; then
+	echo "Building $image_name image..."
+	docker build -t "$image_name" .
+	docker build -t "$image_name-amqp" ./docker-builds/rabbitmq/
+fi
+
+# -h
+# Print help.
+if [ "$1" = "-h" ]; then
+	help_output= cat <<HelpText
+APP DOCKER MANAGER
+
+This script manages Docker for this application. It may need to be run as
+the root user on your system. The create, test, start & restart flags attempt
+to build or rebuild the image based on the Dockerfile before executing.
+
+ARGUMENTS
+
+	-h
+	 	Prints help text.
+
+	-c
+		Creates & starts a container based on '$container_name' image.
+
+	-s
+		Starts the container named '$container_name'.
+
+	-r
+		Restarts the container named '$container_name'.
+
+	-i
+		Inspects the container named '$container_name'.
+
+	-l
+		Displays the log of the container.
+
+	-t
+		Runs the test suite for the application.
+
+	--interactive
+		Runs an interactive container.
+
+	--status
+		Shows status of the container.
+
+	--delete
+		Deletes a container named '$container_name'.
+HelpText
+
+	echo $help_output
+fi
+
+# -c
+# Creates the container.
+if [ "$1" = "-c" ]; then
+	docker run -d --name="$container_name-amqp" $container_name-amqp
+  docker create -v $PWD:/opt/app --name="$container_name" --link  $container_name-amqp:amqp $image_name
+fi
+
+# -s
+# Starts the AMQP container
+if [ "$1" = "-s" ]; then
+	docker start $container_name-amqp
+fi
+
+# -r
+# Starts the AMQP container
+if [ "$1" = "-r" ]; then
+	docker restart $container_name-amqp
+fi
+
+# -i
+# Inspects container.
+if [ "$1" = "-i" ]; then
+	docker inspect $container_name
+fi
+
+# -l
+# Show logs.
+if [ "$1" = "-l" ]; then
+	docker logs -f -t $container_name
+fi
+
+# -t
+# Run tests.
+if [ "$1" = "-t" ]; then
+	docker run --rm -v $PWD:/opt/app --link  $container_name-amqp:amqp $image_name npm test
+fi
+
+# --interactive
+# Run interactive container
+if [ "$1" = "--interactive" ]; then
+	docker run --rm -v $PWD:/opt/app --link  $container_name-amqp:amqp -i -t $image_name /bin/bash
+fi
+
+# --status
+# Shows status.
+if [ "$1" = "--status" ]; then
+	docker ps -a --filter "name=$container_name"
+fi
+
+# --stop
+# Stop the container.
+if [ "$1" = "--stop" ]; then
+	echo "Stopping $container_name container..."
+	docker stop --time=0 $container_name-amqp
+fi
+
+# --delete
+# Deletes container.
+if [ "$1" = "--delete" ]; then
+	echo "Deleting $container_name container..."
+	docker rm $container_name
+	docker rm $container_name-amqp
+fi
