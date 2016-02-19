@@ -1,7 +1,10 @@
-var async = require('async'),
-    amqp = require('amqplib'),
-    channel,
-    exName;
+'use strict';
+
+const Async = require('async');
+const Amqp = require('amqplib');
+
+let channel;
+let exName;
 
 // Creates an AMQP exchange & 3 queues & binds the queues to the exchange.
 // The exchange & non-test queues are all durable.
@@ -12,44 +15,53 @@ var async = require('async'),
 //
 // Returns a promise which contains a hash of default publishing settings that
 // can be used if desired.
-var initialize = function(url, config) {
+const initialize = function (url, config) {
 
-  var connection = amqp.connect(url);
+    const connection = Amqp.connect(url);
 
-  var promise = new Promise(function(resolve, reject) {
+    const promise = new Promise((resolve, reject) => {
 
-    connection.then(function(conn) {
-      channel = conn.createConfirmChannel();
+        connection.then((conn) => {
 
-      channel.then(function(ch) {
+            channel = conn.createConfirmChannel();
 
-        exName = config.exchange.name;
-        var exType = config.exchange.type;
-        var exchange = ch.assertExchange(exName, exType, config.options);
+            channel.then((ch) => {
 
-        async.map(config.queues, function(item, cb) {
-          var queue = exchange.then(function(ex) {
-            return ch.assertQueue(item.name, config.options);
-          });
+                exName = config.exchange.name;
+                const exType = config.exchange.type;
+                const exchange = ch.assertExchange(exName,
+                                                    exType,
+                                                    config.options);
 
-          queue.then(function(q) {
-            console.log('Created ' + item.name + ' queue.');
-            ch.bindQueue(item.name, config.exchange.name, item.routingKey).
-            then(function() {
-              console.log('Bound to exchange.');
-              cb(null, item);
+                Async.map(config.queues, (item, cb) => {
+
+                    const queue = exchange.then((ex) => {
+
+                        return ch.assertQueue(item.name, config.options);
+                    });
+
+                    queue.then((q) => {
+
+                        console.log('Created ' + item.name + ' queue.');
+
+                        ch.bindQueue(item.name,
+                            config.exchange.name,
+                            item.routingKey).then(() => {
+
+                                console.log('Bound to exchange.');
+                                cb(null, item);
+                            });
+                    });
+                }, () => {
+
+                    resolve(channel);
+                });
             });
-          });
-        }, function() {
-          resolve(channel);
         });
-      });
     });
 
-  });
-
-  return promise;
-}
+    return promise;
+};
 
 // Publishes messages to an exchange with a routing key.
 //
@@ -64,31 +76,34 @@ var initialize = function(url, config) {
 // callback
 // 	The function to be called once an attempt has been made to publish the
 // 	messages
-var enqueue = function(options, routing_key, messages, callback) {
-  var buffers = [];
-  var allPublished = true;
+const enqueue = function (options, routing_key, messages, callback) {
 
-  for(var i = 0; i < messages.length; i++) {
-    buffers.push(new Buffer(messages[i]));
-  }
+    const buffers = [];
+    let allPublished = true;
 
-  async.map(buffers, function(item, cb) {
-    channel.then(function(ch) {
-      ch.publish(exName, routing_key, item, options,
-      function(err, ok) {
-        if(err !== null) {
-          allPublished = false;
-          console.log('Message not published');
-        }
-        else {
-          console.log('Message published');
-        }
-        cb(null, item);
-      })
-    });
-  }, callback(allPublished));
+    for (let i = 0; i < messages.length; ++i) {
+        buffers.push(new Buffer(messages[i]));
+    }
 
-}
+    Async.map(buffers, (item, cb) => {
+
+        channel.then((ch) => {
+
+            ch.publish(exName, routing_key, item, options, (err, ok) => {
+
+                if (err !== null) {
+                    allPublished = false;
+                    console.log('Message not published');
+                }
+                else {
+                    console.log('Message published');
+                }
+
+                cb(null, item);
+            });
+        });
+    }, callback(allPublished));
+};
 
 // Sets up a consumer to consume messages from a given queue.
 //
@@ -103,11 +118,16 @@ var enqueue = function(options, routing_key, messages, callback) {
 //  passed the message & the channel. If the consumer has been cancelled, it is
 //  passed null instead of the message. The callback is responsible for ack'ing
 //  or noAck'ing the message.
-var dequeue = function(options, queue, callback) {
-  channel.then(function(ch) {
-    ch.consume(queue, function(msg) { callback(msg, ch) }, options);
-  });
-}
+const dequeue = function (options, queue, callback) {
+
+    channel.then((ch) => {
+
+        ch.consume(queue, (msg) => {
+
+            callback(msg, ch);
+        }, options);
+    });
+};
 
 module.exports.initialize = initialize;
 module.exports.enqueue = enqueue;
