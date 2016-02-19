@@ -2,9 +2,16 @@
 
 const Async = require('async');
 const Amqp = require('amqplib');
+const EventEmitter = require('events');
+const Util = require('util');
 
-let channel;
-let exName;
+
+const QuickQueue = function () {
+
+    this.channel;
+    this.exName;
+};
+Util.inherits(QuickQueue, EventEmitter);
 
 // Creates an AMQP exchange & 3 queues & binds the queues to the exchange.
 // The exchange & non-test queues are all durable.
@@ -15,7 +22,7 @@ let exName;
 //
 // Returns a promise which contains a hash of default publishing settings that
 // can be used if desired.
-const initialize = function (url, config) {
+QuickQueue.prototype.initialize = function (url, config) {
 
     const connection = Amqp.connect(url);
 
@@ -23,13 +30,13 @@ const initialize = function (url, config) {
 
         connection.then((conn) => {
 
-            channel = conn.createConfirmChannel();
+            this.channel = conn.createConfirmChannel();
 
-            channel.then((ch) => {
+            this.channel.then((ch) => {
 
-                exName = config.exchange.name;
+                this.exName = config.exchange.name;
                 const exType = config.exchange.type;
-                const exchange = ch.assertExchange(exName,
+                const exchange = ch.assertExchange(this.exName,
                                                     exType,
                                                     config.options);
 
@@ -54,7 +61,7 @@ const initialize = function (url, config) {
                     });
                 }, () => {
 
-                    resolve(channel);
+                    resolve(this.channel);
                 });
             });
         });
@@ -76,7 +83,7 @@ const initialize = function (url, config) {
 // callback
 // 	The function to be called once an attempt has been made to publish the
 // 	messages
-const enqueue = function (options, routing_key, messages, callback) {
+QuickQueue.prototype.enqueue = function (options, routing_key, messages, callback) {
 
     const buffers = [];
     let allPublished = true;
@@ -87,22 +94,30 @@ const enqueue = function (options, routing_key, messages, callback) {
 
     Async.map(buffers, (item, cb) => {
 
-        channel.then((ch) => {
+        this.channel.then((ch) => {
 
-            ch.publish(exName, routing_key, item, options, (err, ok) => {
+            ch.publish(this.exName, routing_key, item, options, (err, ok) => {
 
                 if (err !== null) {
+                    this.emit('error', err, item);
+                    console.error('Message not published:', err);
                     allPublished = false;
-                    console.log('Message not published');
                 }
                 else {
+                    this.emit('published', item);
                     console.log('Message published');
                 }
 
                 cb(null, item);
             });
         });
-    }, callback(allPublished));
+    }, () => {
+
+        if (allPublished) {
+            this.emit('allPublished');
+        }
+        callback(allPublished);
+    });
 };
 
 // Sets up a consumer to consume messages from a given queue.
@@ -118,17 +133,17 @@ const enqueue = function (options, routing_key, messages, callback) {
 //  passed the message & the channel. If the consumer has been cancelled, it is
 //  passed null instead of the message. The callback is responsible for ack'ing
 //  or noAck'ing the message.
-const dequeue = function (options, queue, callback) {
+QuickQueue.prototype.dequeue = function (options, queue, callback) {
 
-    channel.then((ch) => {
+    this.channel.then((ch) => {
 
         ch.consume(queue, (msg) => {
 
+            this.emit(queue + 'Dequeued', msg, ch);
             callback(msg, ch);
         }, options);
     });
 };
 
-module.exports.initialize = initialize;
-module.exports.enqueue = enqueue;
-module.exports.dequeue = dequeue;
+const exportedQueue = new QuickQueue();
+module.exports = exportedQueue;

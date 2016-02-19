@@ -30,6 +30,11 @@ const amqpUrl = 'amqp://' + process.env.AMQP_PORT_5672_TCP_ADDR;
 let quickChannel;
 let q;
 
+QuickQueue.on('publish', (item) => {
+
+    console.log('Published item!! ', item.toString());
+});
+
 describe('Queue', () => {
 
     before((done) => {
@@ -74,6 +79,24 @@ describe('Queue', () => {
             });
         });
 
+        it('should emit an event on message queue', (done) => {
+
+            const message = 'test 4';
+
+            q = quickChannel.purgeQueue('test_queue');
+
+            q.then(() => {
+
+                QuickQueue.enqueue({}, 'test_queue', [message], () => {});
+            });
+
+            QuickQueue.once('published', (item) => {
+
+                Assert.strictEqual(message, item.toString());
+                done();
+            });
+        });
+
         it('should report if all messages have been queued', (done) => {
 
             const messages = ['test 2', 'test 3'];
@@ -98,7 +121,12 @@ describe('Queue', () => {
 
         it('should get messages off a queue', (done) => {
 
-            const message = ['test 4'];
+            /*QuickQueue.on('test_queueDequeued', (item) => {
+
+                console.log('Dequeued!', item.content.toString());
+            });*/
+
+            const message = ['test 5'];
 
             q = quickChannel.purgeQueue('test_queue');
 
@@ -112,10 +140,35 @@ describe('Queue', () => {
 
                     quickChannel.ack(msg);
                     Assert.strictEqual(message[0], msg.content.toString());
-                    done();
+
+                    quickChannel.cancel('dequeueTest').then(() => {
+
+                        done();
+                    });
                 });
             });
         });
 
+        it('should emit event on dequeuing', (done) => {
+
+            const message = ['test 6'];
+
+            q = quickChannel.purgeQueue('test_queue');
+
+            q.then(() => {
+
+                QuickQueue.enqueue({}, 'test_queue', message, () => {});
+
+                QuickQueue.dequeue({ consumerTag: 'eventTest' },
+                                    'test_queue',
+                                    () => {});
+
+                QuickQueue.on('test_queueDequeued', (item) => {
+
+                    Assert.strictEqual(message[0], item.content.toString());
+                    done();
+                });
+            });
+        });
     });
 });
