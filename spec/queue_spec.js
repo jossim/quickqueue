@@ -1,3 +1,14 @@
+'use strict';
+
+const Lab = require('lab');
+
+const Code = require('code');
+
+const lab = exports.lab = Lab.script();
+const describe = lab.describe;
+const it = lab.it;
+const before = lab.before;
+
 var quickqueue = require('../quickqueue.js'),
     assert = require('assert'),
     async = require('async');

@@ -1,20 +1,22 @@
 {
-  "name": "quickqueue",
-  "version": "0.0.1",
-  "description": "Easily create & use AMQP queues.",
-  "author": "Joseph Simmons <josephdsimmons@gmail.com",
-  "contributors": [
-    { "name": "Joseph Simmons", "email": "josephdsimmons@gmail.com" }
-  ],
-  "scripts": {
-    "test": "mocha spec/"
-  },
-  "main": "quickqueue.js",
-  "dependencies": {
-    "async": "1.3.x",
-    "amqplib": "0.3.x"
-  },
-  "devDependencies": {
-    "mocha": "2.x"
-  }
+    "name": "quickqueue",
+    "version": "0.0.1",
+    "description": "Easily create & use AMQP queues.",
+    "author": "Joseph Simmons <josephdsimmons@gmail.com",
+    "contributors": [
+        { "name": "Joseph Simmons", "email": "josephdsimmons@gmail.com" }
+    ],
+    "scripts": {
+        "test": "lab -C -v -L spec/"
+    },
+    "main": "quickqueue.js",
+    "dependencies": {
+        "async": "^1.5.2",
+        "amqplib": "^0.4.1"
+    },
+    "devDependencies": {
+        "lab": "^7.3.0",
+        "code": "^2.1.0"
+    },
+    "license": "MIT"
 }
