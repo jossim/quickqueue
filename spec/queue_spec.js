@@ -8,6 +8,7 @@ const lab = exports.lab = Lab.script();
 const describe = lab.describe;
 const it = lab.it;
 const before = lab.before;
+const beforeEach = lab.beforeEach;
 
 
 const config = {
@@ -48,6 +49,14 @@ describe('Queue', () => {
         });
     });
 
+    beforeEach((done) => {
+
+        quickChannel.purgeQueue('test_queue').then(() => {
+
+            done();
+        });
+    });
+
     describe('Enqueuing', () => {
 
         it('should queue a message', (done) => {
@@ -83,14 +92,23 @@ describe('Queue', () => {
 
             const message = 'test 4';
 
-            q = quickChannel.purgeQueue('test_queue');
-
-            q.then(() => {
-
-                QuickQueue.enqueue({}, 'test_queue', [message], () => {});
-            });
+            QuickQueue.enqueue({}, 'test_queue', [message], () => {});
 
             QuickQueue.once('published', (item) => {
+
+                Assert.strictEqual(message, item.toString());
+                done();
+            });
+        });
+
+        it('should emit a custom event on message queue', (done) => {
+
+            const message = 'test custom';
+            const eName = { published: 'customPublished' };
+
+            QuickQueue.enqueue({}, 'test_queue', [message], () => {}, eName);
+
+            QuickQueue.once('customPublished', (item) => {
 
                 Assert.strictEqual(message, item.toString());
                 done();
@@ -102,17 +120,12 @@ describe('Queue', () => {
             const messages = ['test 2', 'test 3'];
             let all = false;
 
-            // Purge queue & queue messages.
-            q = quickChannel.purgeQueue('test_queue');
 
-            q.then(() => {
+            QuickQueue.enqueue({}, 'test_queue', messages, (allPublished) => {
 
-                QuickQueue.enqueue({}, 'test_queue', messages, (allPublished) => {
-
-                    all = allPublished;
-                    Assert.strictEqual(true, all);
-                    done();
-                });
+                all = allPublished;
+                Assert.strictEqual(true, all);
+                done();
             });
         });
     });
@@ -128,23 +141,18 @@ describe('Queue', () => {
 
             const message = ['test 5'];
 
-            q = quickChannel.purgeQueue('test_queue');
 
-            q.then(() => {
+            QuickQueue.enqueue({}, 'test_queue', message, () => {});
 
-                QuickQueue.enqueue({}, 'test_queue', message, () => {});
+            QuickQueue.dequeue({ consumerTag: 'dequeueTest' }, 'test_queue',
+            (msg) => {
 
-                QuickQueue.dequeue({ consumerTag: 'dequeueTest' },
-                'test_queue',
-                (msg) => {
+                quickChannel.ack(msg);
+                Assert.strictEqual(message[0], msg.content.toString());
 
-                    quickChannel.ack(msg);
-                    Assert.strictEqual(message[0], msg.content.toString());
+                quickChannel.cancel('dequeueTest').then(() => {
 
-                    quickChannel.cancel('dequeueTest').then(() => {
-
-                        done();
-                    });
+                    done();
                 });
             });
         });
@@ -153,19 +161,40 @@ describe('Queue', () => {
 
             const message = ['test 6'];
 
-            q = quickChannel.purgeQueue('test_queue');
+            QuickQueue.enqueue({}, 'test_queue', message, () => {});
 
-            q.then(() => {
+            QuickQueue.dequeue({ consumerTag: 'eventTest' },
+                                'test_queue',
+                                () => {});
 
-                QuickQueue.enqueue({}, 'test_queue', message, () => {});
+            QuickQueue.on('dequeue', (item) => {
 
-                QuickQueue.dequeue({ consumerTag: 'eventTest' },
-                                    'test_queue',
-                                    () => {});
+                Assert.strictEqual(message[0], item.content.toString());
 
-                QuickQueue.on('test_queueDequeued', (item) => {
+                quickChannel.cancel('eventTest').then(() => {
 
-                    Assert.strictEqual(message[0], item.content.toString());
+                    done();
+                });
+            });
+        });
+
+        it('should emit custom event on dequeuing', (done) => {
+
+            const message = 'test custom dequeue';
+
+            QuickQueue.enqueue({}, 'test_queue', [message], () => {});
+
+            QuickQueue.dequeue({ consumerTag: 'customEventTest' },
+                                'test_queue',
+                                () => {},
+                                'customD');
+
+            QuickQueue.on('customD', (item) => {
+
+                Assert.strictEqual(message, item.content.toString());
+
+                quickChannel.cancel('customEventTest').then(() => {
+
                     done();
                 });
             });
