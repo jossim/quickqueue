@@ -5,11 +5,11 @@ Some minimal code that works with [amqplib](https://www.npmjs.com/package/amqpli
 ## Initialize
 
 ```javascript
-var = quickqueue = require('quickqueue');
+const QuickQueue = require('quickqueue');
 
-var url = 'amqp://localhost';
+const url = 'amqp://localhost';
 
-var config = {
+const config = {
   // These options are applied to the exchange & queues as applicable.
   options: {
     durable: true,
@@ -26,49 +26,51 @@ var config = {
 }
 
 // Returns a promise with the value of a channel from amqplib
-quickqueue.initialize(url, config);
+QuickQueue.initialize(url, config);
 ```
 
 ## Queue messages
 
 ```javascript
-var options = {
+const options = {
   persistent: true,
   mandatory: false,
   contentType: 'text/plain'
 }
 
-var routing_key = 'rainbows';
+const routing_key = 'rainbows';
 
-var messages = ["I'm the first message", "I'm the second message"];
+const messages = ['I\'m the first message', 'I\'m the second message'];
 
 // Takes a boolean. true if all messages are published, false otherwise.
-var callback = function(published) {
-  if(published) {
-    console.log('All messages have been published.');
-  }
-  else {
-    console.log('Not all messages have been published.');
-  }
-}
+const callback = function (published) {
 
-quickqueue.enqueue(options, routing_key, messages, callback);
+    if(published) {
+        console.log('All messages have been published.');
+    }
+    else {
+        console.log('Not all messages have been published.');
+    }
+};
+
+QuickQueue.enqueue(options, routing_key, messages, callback);
 ```
 
 ## Consume messages
 ```javascript
-var options = {
+const options = {
   noAck: false,
   exclusive: true
 }
 
-var queue = 'queue1';
+const queue = 'queue1';
 
 // Takes a message & channel.
-var callback = function(msg, ch) {
-  console.log(msg.content.toString());
-  ch.ack();
-}
+const callback = function (msg, ch) {
 
-quickqueue.dequeue(options, queue, callback);
+    console.log(msg.content.toString());
+    ch.ack();
+};
+
+QuickQueue.dequeue(options, queue, callback);
 ```

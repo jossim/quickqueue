@@ -13,18 +13,38 @@ const QuickQueue = function () {
 };
 Util.inherits(QuickQueue, EventEmitter);
 
-// Creates an AMQP exchange & 3 queues & binds the queues to the exchange.
-// The exchange & non-test queues are all durable.
-//
-// The exchange is a topic exchange called 'sf-message-broker'. The three
-// queues' routing keys are the same as their names: 'from_sales_force',
-// 'to_sales_force', 'test_queue'.
-//
-// Returns a promise which contains a hash of default publishing settings that
-// can be used if desired.
-QuickQueue.prototype.initialize = function (url, config) {
+/**
+* Initialize an AMQP setup.
+*
+* @param {string} uri           The URI of the AMQP server
+*
+* @param {config} object        The configuration object. Must include options,
+* exchange, & queues. All queues in the queues array are created, if they don't
+* already exist. The exchange is created & all the queues are bound to it.
+*
+* const config = options: {
+*     // These options are applied to the exchange & queues as applicable.
+*     durable: true,
+*     persistent: false,
+*     ...
+*   },
+*   exchange: { // All of the queues will be bound to this exchange.
+*       name: 'theExchangeName',
+*       type: 'topic'
+*   },
+*   queues: [
+*       { name: 'queue1', routingKey: 'rainbows' },
+*       { name: 'queue2', routingKey: 'butterflies' },
+*       ...
+*   ]
+* }
+*
+* @returns {promise} promise    The promise resolves with the channel created or
+* rejects with an error message.
+*/
+QuickQueue.prototype.initialize = function (uri, config) {
 
-    const connection = Amqp.connect(url);
+    const connection = Amqp.connect(uri);
 
     const promise = new Promise((resolve, reject) => {
 
@@ -57,7 +77,17 @@ QuickQueue.prototype.initialize = function (url, config) {
 
                                 console.log('Bound to exchange.');
                                 cb(null, item);
+                            }).catch((error) => {
+
+                                console.error(error);
+                                reject(error);
                             });
+                    });
+
+                    queue.catch((error) => {
+
+                        console.error(error);
+                        reject(error);
                     });
                 }, () => {
 
