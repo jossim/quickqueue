@@ -13,12 +13,13 @@ const QuickQueue = function () {
 };
 Util.inherits(QuickQueue, EventEmitter);
 
+
 /**
 * Initialize an AMQP setup.
 *
 * @param {string} uri           The URI of the AMQP server
 *
-* @param {config} object        The configuration object. Must include options,
+* @param {hash} config        The configuration object. Must include options,
 * exchange, & queues. All queues in the queues array are created, if they don't
 * already exist. The exchange is created & all the queues are bound to it.
 *
@@ -100,19 +101,20 @@ QuickQueue.prototype.initialize = function (uri, config) {
     return promise;
 };
 
-// Publishes messages to an exchange with a routing key.
-//
-// Accepts:
-//
-// options
-// 	A hash of exchange publishing options.
-// routing_key
-// 	The routing key as a string.
-// messages
-// 	An array of messages to publish.
-// callback
-// 	The function to be called once an attempt has been made to publish the
-// 	messages
+
+/**
+* Publish messsages to an exchange with a routing key
+*
+* @param {hash} options       A hash of exchange publising options
+*
+* @param {string} routing_key   The routing key as a string
+*
+* @param {array} messages       An array of messages to be published
+*
+* @param {function} callback    The function called once a publishing attempt is
+* made on every message. The function is passed a boolean which is false if a
+* message failed to publish.
+*/
 QuickQueue.prototype.enqueue = function (options, routing_key, messages, callback) {
 
     const buffers = [];
@@ -150,19 +152,19 @@ QuickQueue.prototype.enqueue = function (options, routing_key, messages, callbac
     });
 };
 
-// Sets up a consumer to consume messages from a given queue.
-//
-// Accepts:
-//
-// queue
-//  A string that is the name of a queue.
-// options
-//  A hash of options for the consumer
-// callback
-//  A callback that is invoked when a message is received. The callback is
-//  passed the message & the channel. If the consumer has been cancelled, it is
-//  passed null instead of the message. The callback is responsible for ack'ing
-//  or noAck'ing the message.
+
+/**
+* Setup a consumer to consume messages from a given queue
+*
+* @param {string} queue The name of the queue to consume
+*
+* @param {hash} options   A hash of amqlib options used to setup the consumer
+*
+* @param {function} callback    The callback is invoked when a message is
+* received. The callback is passed the message & amqplib channel. If the
+* consumer has been cancelled, it is passed null instead of the message. The
+* callback is responsible for ack'ing or noAck'ing the message.
+*/
 QuickQueue.prototype.dequeue = function (options, queue, callback) {
 
     this.channel.then((ch) => {
