@@ -1,6 +1,6 @@
 {
     "name": "quickqueue",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Easily create & use AMQP queues.",
     "author": "Joseph Simmons <josephdsimmons@gmail.com",
     "contributors": [
