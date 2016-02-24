@@ -31,11 +31,6 @@ const amqpUrl = 'amqp://' + process.env.AMQP_PORT_5672_TCP_ADDR;
 let quickChannel;
 let q;
 
-QuickQueue.on('publish', (item) => {
-
-    console.log('Published item!! ', item.toString());
-});
-
 describe('Queue', () => {
 
     before((done) => {
@@ -115,6 +110,44 @@ describe('Queue', () => {
             });
         });
 
+        it('should emit a custom event on queuing all messages', (done) => {
+
+            const messages = ['test custom1', 'test custom2'];
+            const eNames = { completed: 'customComplete' };
+
+            QuickQueue.enqueue({}, 'test_queue', messages, () => {}, eNames);
+
+            QuickQueue.once('customComplete', () => {
+
+                QuickQueue.dequeue(
+                    { consumerTag: 'customComplete' },
+                    'test_queue',
+                    () => {},
+                    'dequeueComplete'
+                );
+            });
+
+            let dCount = 0;
+            const dQmessages = [];
+
+            QuickQueue.on('dequeueComplete', (msg, ch) => {
+
+                ++dCount;
+                dQmessages.push(msg.content.toString());
+
+                if (dCount === 2) {
+
+                    Assert.strictEqual(dQmessages[0], messages[0]);
+                    Assert.strictEqual(dQmessages[1], messages[1]);
+
+                    quickChannel.cancel('customComplete').then(() => {
+
+                        done();
+                    })
+                }
+            });
+        });
+
         it('should report if all messages have been queued', (done) => {
 
             const messages = ['test 2', 'test 3'];
@@ -134,13 +167,7 @@ describe('Queue', () => {
 
         it('should get messages off a queue', (done) => {
 
-            /*QuickQueue.on('test_queueDequeued', (item) => {
-
-                console.log('Dequeued!', item.content.toString());
-            });*/
-
             const message = ['test 5'];
-
 
             QuickQueue.enqueue({}, 'test_queue', message, () => {});
 

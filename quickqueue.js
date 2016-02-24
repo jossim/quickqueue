@@ -15,7 +15,7 @@ Util.inherits(QuickQueue, EventEmitter);
 
 
 /**
-* Initialize an AMQP setup.
+* Initialize an AMQP setup
 *
 * @param {string} uri           The URI of the AMQP server
 *
@@ -48,6 +48,12 @@ QuickQueue.prototype.initialize = function (uri, config) {
     const connection = Amqp.connect(uri);
 
     const promise = new Promise((resolve, reject) => {
+
+        connection.catch((err) => {
+
+            console.error(err);
+            reject(err);
+        });
 
         connection.then((conn) => {
 
@@ -140,7 +146,7 @@ QuickQueue.prototype.enqueue = function (options, routing_key, messages, callbac
             notPublished = eventNames.notPublished;
         }
         if (eventNames.completed) {
-            completed = eventNames.notPublished;
+            completed = eventNames.completed;
         }
     }
 
