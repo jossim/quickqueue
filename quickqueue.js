@@ -45,6 +45,10 @@ const QuickQueue = function () {
 };
 Util.inherits(QuickQueue, EventEmitter);
 
+QuickQueue.prototype.getMessages = function() {
+
+    return internals.messages;
+};
 
 /**
 * Acknowledge a message
