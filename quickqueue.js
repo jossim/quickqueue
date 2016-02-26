@@ -5,6 +5,38 @@ const Amqp = require('amqplib');
 const EventEmitter = require('events');
 const Util = require('util');
 
+const internals = {};
+
+internals.messages = {};
+
+/**
+* Add a message to the messages hash if it's currently not included
+*
+* @param {object} msg   The message to queue
+*/
+internals.pushMessage = function (msg) {
+
+    const deliveryTag = msg.fields.deliveryTag;
+
+    if (!this.messages[deliveryTag]) {
+        this.messages[deliveryTag] = msg;
+    }
+};
+
+/**
+* Check if a message has been queued or not
+*
+* @param {object} msg   The message that will be checked
+*/
+internals.isQueued = function (msg) {
+
+    if (this.messages[msg.fields.deliveryTag]) {
+        return true;
+    }
+
+    return false;
+};
+
 
 const QuickQueue = function () {
 
@@ -12,6 +44,27 @@ const QuickQueue = function () {
     this.exName;
 };
 Util.inherits(QuickQueue, EventEmitter);
+
+
+/**
+* Acknowledge a message
+*
+* @param {object} msg   The message to acknowledge
+*/
+QuickQueue.prototype.ackMessage = function (msg) {
+
+    const deliveryTag = msg.fields.deliveryTag;
+
+    if (internals.messages[deliveryTag]) {
+
+        this.channel.then((ch) => {
+
+            ch.ack(msg);
+        });
+
+        delete internals.messages[deliveryTag];
+    }
+};
 
 
 /**
@@ -204,8 +257,15 @@ QuickQueue.prototype.dequeue = function (options, queue, callback, eventName) {
 
         ch.consume(queue, (msg) => {
 
-            this.emit(consumerEvent, msg, ch);
-            callback(msg, ch);
+            /**
+             * If this message has already been seen, don't emit event or run
+             * callback
+            */
+            if (!internals.isQueued(msg)) {
+                this.emit(consumerEvent, msg, ch);
+                callback(msg, ch);
+            }
+            internals.pushMessage(msg);
         }, options);
     });
 };

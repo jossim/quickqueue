@@ -143,7 +143,7 @@ describe('Queue', () => {
                     quickChannel.cancel('customComplete').then(() => {
 
                         done();
-                    })
+                    });
                 }
             });
         });
@@ -174,7 +174,7 @@ describe('Queue', () => {
             QuickQueue.dequeue({ consumerTag: 'dequeueTest' }, 'test_queue',
             (msg) => {
 
-                quickChannel.ack(msg);
+                QuickQueue.ackMessage(msg);
                 Assert.strictEqual(message[0], msg.content.toString());
 
                 quickChannel.cancel('dequeueTest').then(() => {
@@ -194,9 +194,11 @@ describe('Queue', () => {
                                 'test_queue',
                                 () => {});
 
-            QuickQueue.on('dequeue', (item) => {
+            QuickQueue.once('dequeue', (msg, ch) => {
 
-                Assert.strictEqual(message[0], item.content.toString());
+                QuickQueue.ackMessage(msg);
+
+                Assert.strictEqual(message[0], msg.content.toString());
 
                 quickChannel.cancel('eventTest').then(() => {
 
@@ -224,6 +226,42 @@ describe('Queue', () => {
 
                     done();
                 });
+            });
+        });
+
+
+        it('should dequeue multiple messages & emit same number of events',
+        (done) => {
+
+            const messages = ['test 7', 'test 8', 'test 9'];
+
+            QuickQueue.enqueue({}, 'test_queue', messages, () => {});
+
+            QuickQueue.dequeue({ consumerTag: 'eventMultiTest' },
+                                'test_queue',
+                                () => {},
+                                'multiTest');
+
+            const dMessages = [];
+            let count = 0;
+
+            QuickQueue.on('multiTest', (msg, ch) => {
+
+                ++count;
+                dMessages.push(msg.content.toString());
+                QuickQueue.ackMessage(msg);
+
+                if (count === 3) {
+                    Assert.strictEqual(messages.length, dMessages.length);
+                    Assert.strictEqual(messages[0], dMessages[0]);
+                    Assert.strictEqual(messages[1], dMessages[1]);
+                    Assert.strictEqual(messages[2], dMessages[2]);
+
+                    quickChannel.cancel('eventMultiTest').then(() => {
+
+                        done();
+                    });
+                }
             });
         });
     });
