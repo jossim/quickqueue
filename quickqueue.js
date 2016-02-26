@@ -5,36 +5,36 @@ const Amqp = require('amqplib');
 const EventEmitter = require('events');
 const Util = require('util');
 
-const internals = {};
 
-internals.messages = {};
+const internals = {
+    messages: {},
+    channel: null,
+    /**
+    * Add a message to the messages hash if it's currently not included
+    *
+    * @param {object} msg   The message to queue
+    */
+    pushMessage: function (msg) {
 
-/**
-* Add a message to the messages hash if it's currently not included
-*
-* @param {object} msg   The message to queue
-*/
-internals.pushMessage = function (msg) {
+        const deliveryTag = msg.fields.deliveryTag;
 
-    const deliveryTag = msg.fields.deliveryTag;
+        if (!this.messages[deliveryTag]) {
+            this.messages[deliveryTag] = msg;
+        }
+    },
+    /**
+    * Check if a message has been queued or not
+    *
+    * @param {object} msg   The message that will be checked
+    */
+    isQueued: function (msg) {
 
-    if (!this.messages[deliveryTag]) {
-        this.messages[deliveryTag] = msg;
+        if (this.messages[msg.fields.deliveryTag]) {
+            return true;
+        }
+
+        return false;
     }
-};
-
-/**
-* Check if a message has been queued or not
-*
-* @param {object} msg   The message that will be checked
-*/
-internals.isQueued = function (msg) {
-
-    if (this.messages[msg.fields.deliveryTag]) {
-        return true;
-    }
-
-    return false;
 };
 
 
@@ -45,7 +45,8 @@ const QuickQueue = function () {
 };
 Util.inherits(QuickQueue, EventEmitter);
 
-QuickQueue.prototype.getMessages = function() {
+
+QuickQueue.prototype.getMessages = function () {
 
     return internals.messages;
 };
@@ -60,13 +61,8 @@ QuickQueue.prototype.ackMessage = function (msg) {
     const deliveryTag = msg.fields.deliveryTag;
 
     if (internals.messages[deliveryTag]) {
-
-        this.channel.then((ch) => {
-
-            ch.ack(msg);
-        });
-
         delete internals.messages[deliveryTag];
+        internals.channel.ack(msg);
     }
 };
 
@@ -118,6 +114,7 @@ QuickQueue.prototype.initialize = function (uri, config) {
 
             this.channel.then((ch) => {
 
+                internals.channel = ch;
                 this.exName = config.exchange.name;
                 const exType = config.exchange.type;
                 const exchange = ch.assertExchange(this.exName,
@@ -213,22 +210,20 @@ QuickQueue.prototype.enqueue = function (options, routing_key, messages, callbac
 
     Async.map(buffers, (item, cb) => {
 
-        this.channel.then((ch) => {
 
-            ch.publish(this.exName, routing_key, item, options, (err, ok) => {
+        internals.channel.publish(this.exName, routing_key, item, options, (err, ok) => {
 
-                if (err !== null) {
-                    this.emit(notPublished, err, item);
-                    console.error('Message not published:', err);
-                    allPublished = false;
-                }
-                else {
-                    this.emit(published, item);
-                    console.log('Message published');
-                }
+            if (err !== null) {
+                this.emit(notPublished, err, item);
+                console.error('Message not published:', err);
+                allPublished = false;
+            }
+            else {
+                this.emit(published, item);
+                console.log('Message published');
+            }
 
-                cb(null, item);
-            });
+            cb(null, item);
         });
     }, () => {
 
@@ -259,17 +254,19 @@ QuickQueue.prototype.dequeue = function (options, queue, callback, eventName) {
 
     this.channel.then((ch) => {
 
-        ch.consume(queue, (msg) => {
+        internals.channel.consume(queue, (msg) => {
+
+            const notQueued = !internals.isQueued(msg);
+            internals.pushMessage(msg);
 
             /**
              * If this message has already been seen, don't emit event or run
              * callback
             */
-            if (!internals.isQueued(msg)) {
+            if (notQueued) {
                 this.emit(consumerEvent, msg, ch);
                 callback(msg, ch);
             }
-            internals.pushMessage(msg);
         }, options);
     });
 };
