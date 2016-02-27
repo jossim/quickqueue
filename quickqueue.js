@@ -43,6 +43,7 @@ const internals = {
     }
 };
 
+internals.messages[Date.now().toString()] = Math.random();
 
 const QuickQueue = function () {
 
