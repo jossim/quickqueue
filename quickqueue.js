@@ -18,14 +18,8 @@ const internals = {
 
         const deliveryTag = msg.fields.deliveryTag;
 
-        console.log('tag pushed', deliveryTag);
-
         if (!this.messages[deliveryTag]) {
             this.messages[deliveryTag] = msg;
-            console.log('messages inserted', deliveryTag);
-        }
-        else {
-            console.log('not inserted');
         }
     },
     /**
@@ -43,7 +37,6 @@ const internals = {
     }
 };
 
-internals.messages[Date.now().toString()] = Math.random();
 
 const QuickQueue = function () {
 
