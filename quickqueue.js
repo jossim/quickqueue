@@ -272,4 +272,6 @@ QuickQueue.prototype.dequeue = function (options, queue, callback, eventName) {
 };
 
 const exportedQueue = new QuickQueue();
+exportedQueue.setMaxListeners(0);
+
 module.exports = exportedQueue;
