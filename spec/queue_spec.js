@@ -56,43 +56,19 @@ describe('Queue', () => {
 
         it('should queue a message', (done) => {
 
-            let msg;
-
-            const message = 'test 1';
-
-            q = quickChannel.purgeQueue('test_queue');
-
-            q.then(() => {
-
-                QuickQueue.enqueue({}, 'test_queue', [message], () => {
-
-                    const test = function () {
-
-                        msg = quickChannel.get('test_queue');
-
-                        msg.then((value) => {
-
-                            Assert.strictEqual(message,
-                                                value.content.toString());
-
-                            done();
-                        });
-                    };
-                    setTimeout(test, 0);
-                });
-            });
-        });
-
-        it('should emit an event on message queue', (done) => {
-
             const message = 'test 4';
 
-            QuickQueue.enqueue({}, 'test_queue', [message], () => {});
+            QuickQueue.enqueue({}, 'test_queue', [message]);
 
-            QuickQueue.once('published', (item) => {
+            QuickQueue.once('allPublished', (item) => {
 
-                Assert.strictEqual(message, item.toString());
-                done();
+                const msg = quickChannel.get('test_queue');
+
+                msg.then((value) => {
+
+                    Assert.strictEqual(message, value.content.toString());
+                    done();
+                });
             });
         });
 
@@ -101,12 +77,17 @@ describe('Queue', () => {
             const message = 'test custom';
             const eName = { published: 'customPublished' };
 
-            QuickQueue.enqueue({}, 'test_queue', [message], () => {}, eName);
+            QuickQueue.enqueue({}, 'test_queue', [message], eName);
 
             QuickQueue.once('customPublished', (item) => {
 
-                Assert.strictEqual(message, item.toString());
-                done();
+                const msg = quickChannel.get('test_queue');
+
+                msg.then((value) => {
+
+                    Assert.strictEqual(message, value.content.toString());
+                    done();
+                });
             });
         });
 
@@ -115,7 +96,7 @@ describe('Queue', () => {
             const messages = ['test custom1', 'test custom2'];
             const eNames = { completed: 'customComplete' };
 
-            QuickQueue.enqueue({}, 'test_queue', messages, () => {}, eNames);
+            QuickQueue.enqueue({}, 'test_queue', messages, eNames);
 
             QuickQueue.once('customComplete', () => {
 
@@ -145,20 +126,6 @@ describe('Queue', () => {
                         done();
                     });
                 }
-            });
-        });
-
-        it('should report if all messages have been queued', (done) => {
-
-            const messages = ['test 2', 'test 3'];
-            let all = false;
-
-
-            QuickQueue.enqueue({}, 'test_queue', messages, (allPublished) => {
-
-                all = allPublished;
-                Assert.strictEqual(true, all);
-                done();
             });
         });
     });

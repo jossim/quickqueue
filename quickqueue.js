@@ -51,6 +51,7 @@ QuickQueue.prototype.getMessages = function () {
     return internals.messages;
 };
 
+
 /**
 * Acknowledge a message
 *
@@ -171,10 +172,6 @@ QuickQueue.prototype.initialize = function (uri, config) {
 *
 * @param {array} messages       An array of messages to be published
 *
-* @param {function} callback    The function called once a publishing attempt is
-* made on every message. The function is passed a boolean which is false if a
-* message failed to publish.
-*
 * @param {hash} eventNames      (optional) A hash of events that will be
 * emitted. Expects keys & values for any or all of the following 3 events:
 * published, notPublished, & completed. Defaults to 'published', 'error',
@@ -183,7 +180,7 @@ QuickQueue.prototype.initialize = function (uri, config) {
 * published, the notPublished event returns the error & the message that was not
 * published.
 */
-QuickQueue.prototype.enqueue = function (options, routing_key, messages, callback, eventNames) {
+QuickQueue.prototype.enqueue = function (options, routing_key, messages, eventNames) {
 
     const buffers = [];
     let allPublished = true;
@@ -230,7 +227,6 @@ QuickQueue.prototype.enqueue = function (options, routing_key, messages, callbac
         if (allPublished) {
             this.emit(completed);
         }
-        callback(allPublished);
     });
 };
 
