@@ -1,6 +1,6 @@
 {
     "name": "quickqueue",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Easily create & use AMQP queues.",
     "author": "Joseph Simmons <josephdsimmons@gmail.com",
     "contributors": [
@@ -17,6 +17,10 @@
     "devDependencies": {
         "lab": "^7.3.0",
         "code": "^2.1.0"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/jossim/quickqueue.git"
     },
     "license": "MIT"
 }
