@@ -103,7 +103,6 @@ describe('Queue', () => {
                 QuickQueue.dequeue(
                     { consumerTag: 'customComplete' },
                     'test_queue',
-                    () => {},
                     'dequeueComplete'
                 );
             });
@@ -134,32 +133,11 @@ describe('Queue', () => {
 
         it('should get messages off a queue', (done) => {
 
-            const message = ['test 5'];
-
-            QuickQueue.enqueue({}, 'test_queue', message, () => {});
-
-            QuickQueue.dequeue({ consumerTag: 'dequeueTest' }, 'test_queue',
-            (msg) => {
-
-                QuickQueue.ackMessage(msg);
-                Assert.strictEqual(message[0], msg.content.toString());
-
-                quickChannel.cancel('dequeueTest').then(() => {
-
-                    done();
-                });
-            });
-        });
-
-        it('should emit event on dequeuing', (done) => {
-
             const message = ['test 6'];
 
-            QuickQueue.enqueue({}, 'test_queue', message, () => {});
+            QuickQueue.enqueue({}, 'test_queue', message);
 
-            QuickQueue.dequeue({ consumerTag: 'eventTest' },
-                                'test_queue',
-                                () => {});
+            QuickQueue.dequeue({ consumerTag: 'eventTest' }, 'test_queue');
 
             QuickQueue.once('dequeue', (msg, ch) => {
 
@@ -182,7 +160,6 @@ describe('Queue', () => {
 
             QuickQueue.dequeue({ consumerTag: 'customEventTest' },
                                 'test_queue',
-                                () => {},
                                 'customD');
 
             QuickQueue.on('customD', (item) => {
@@ -206,7 +183,6 @@ describe('Queue', () => {
 
             QuickQueue.dequeue({ consumerTag: 'eventMultiTest' },
                                 'test_queue',
-                                () => {},
                                 'multiTest');
 
             const dMessages = [];

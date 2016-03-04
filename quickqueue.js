@@ -53,27 +53,11 @@ QuickQueue.prototype.getMessages = function () {
 
 
 /**
-* Acknowledge a message
-*
-* @param {object} msg   The message to acknowledge
-*/
-QuickQueue.prototype.ackMessage = function (msg) {
-
-    const deliveryTag = msg.fields.deliveryTag;
-
-    if (internals.messages[deliveryTag]) {
-        delete internals.messages[deliveryTag];
-        internals.channel.ack(msg);
-    }
-};
-
-
-/**
 * Initialize an AMQP setup
 *
 * @param {string} uri           The URI of the AMQP server
 *
-* @param {hash} config        The configuration object. Must include options,
+* @param {hash} config          The configuration object. Must include options,
 * exchange, & queues. All queues in the queues array are created, if they don't
 * already exist. The exchange is created & all the queues are bound to it.
 *
@@ -164,6 +148,22 @@ QuickQueue.prototype.initialize = function (uri, config) {
 
 
 /**
+* Acknowledge a message
+*
+* @param {object} msg   The message to acknowledge
+*/
+QuickQueue.prototype.ackMessage = function (msg) {
+
+    const deliveryTag = msg.fields.deliveryTag;
+
+    if (internals.messages[deliveryTag]) {
+        internals.channel.ack(msg);
+        delete internals.messages[deliveryTag];
+    }
+};
+
+
+/**
 * Publish messsages to an exchange with a routing key
 *
 * @param {hash} options         A hash of exchange publising options
@@ -212,12 +212,10 @@ QuickQueue.prototype.enqueue = function (options, routing_key, messages, eventNa
 
             if (err !== null) {
                 this.emit(notPublished, err, item);
-                console.error('Message not published:', err);
                 allPublished = false;
             }
             else {
                 this.emit(published, item);
-                console.log('Message published');
             }
 
             cb(null, item);
@@ -239,12 +237,11 @@ QuickQueue.prototype.enqueue = function (options, routing_key, messages, eventNa
 * @param {hash} options         A hash of amqlib options used to setup the
 * consumer
 *
-* @param {function} callback    The callback is invoked when a message is
-* received. The callback is passed the message & amqplib channel. If the
-* consumer has been cancelled, it is passed null instead of the message. The
-* callback is responsible for ack'ing or noAck'ing the message.
+* @param {string} eventName     (optional) Name of event to emit when a message
+* is consumed. Default is 'dequeue'. The event returns the message that was
+* consumed & an AMQP channel. The message is not acknowledged.
 */
-QuickQueue.prototype.dequeue = function (options, queue, callback, eventName) {
+QuickQueue.prototype.dequeue = function (options, queue, eventName) {
 
     const consumerEvent = eventName || 'dequeue';
 
@@ -261,7 +258,6 @@ QuickQueue.prototype.dequeue = function (options, queue, callback, eventName) {
             */
             if (notQueued) {
                 this.emit(consumerEvent, msg, ch);
-                callback(msg, ch);
             }
         }, options);
     });
